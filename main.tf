@@ -19,18 +19,18 @@ provider "azurerm" {
   features {}
 
   # Azure for Students subscription
-  subscription_id = "1859a532-3db6-4ef0-8688-eb063096912e"
+  subscription_id = "XXXXX-XXXXXXXXXXXX-XXXXXXXXXXXX"
 
   # Required for student accounts
   resource_provider_registrations = "none"
 }
 
 ##############################################
-# LOCALS – OWNERS + USERNAME (Reza – Step 1)
+# LOCALS – PROJECT CONFIGURATION
 ##############################################
 
 locals {
-  owners = "Group 6 - Marcela Redondo Hernandez; B M Faruq Reza; Selorm Kwaku Soga; Ashish Thapa"
+  owners = "Group 6"
 
   # STEP 1 — Admin Username (Reza)
   # First letters of first + last name for each student:
@@ -38,11 +38,11 @@ locals {
   # Marcela Redondo Hernandez -> mr
   # Selorm Kwaku Soga         -> ss
   # Ashish Thapa              -> at
-  admin_username = "brmrssat"
+  admin_username = "teamadmin"
 }
 
 ##############################################
-# STEP 2 — RANDOM PASSWORD (Reza)
+# RANDOM PASSWORD
 ##############################################
 
 resource "random_password" "admin" {
@@ -55,7 +55,7 @@ resource "random_password" "admin" {
 }
 
 ##############################################
-# RESOURCE GROUP (Unit 6)
+# RESOURCE GROUP 
 ##############################################
 
 resource "azurerm_resource_group" "rg" {
@@ -68,7 +68,7 @@ resource "azurerm_resource_group" "rg" {
 }
 
 ##############################################
-# VNET + SUBNET (Unit 6)
+# VIRTUAL NETWORK + SUBNET
 ##############################################
 
 resource "azurerm_virtual_network" "vnet" {
@@ -90,7 +90,7 @@ resource "azurerm_subnet" "subnet" {
 }
 
 ##############################################
-# STEP 6 — PUBLIC IP (Marcela)
+# PUBLIC IP
 ##############################################
 
 resource "azurerm_public_ip" "public_ip" {
@@ -106,7 +106,7 @@ resource "azurerm_public_ip" "public_ip" {
 }
 
 ##############################################
-# NETWORK INTERFACE (Unit 6 + Step 6)
+# NETWORK INTERFACE
 ##############################################
 
 resource "azurerm_network_interface" "nic" {
@@ -119,7 +119,7 @@ resource "azurerm_network_interface" "nic" {
     subnet_id                     = azurerm_subnet.subnet.id
     private_ip_address_allocation = "Dynamic"
 
-    # STEP 6 — Attach public IP so VM is reachable from the internet
+    # Attach public IP so VM is reachable from the internet
     public_ip_address_id = azurerm_public_ip.public_ip.id
   }
 
@@ -129,7 +129,7 @@ resource "azurerm_network_interface" "nic" {
 }
 
 ##############################################
-# STEP 7 — NSG WITH RULES (SSH 22, WEB 8080)
+# NETWORK SECURITY GROUP
 ##############################################
 
 resource "azurerm_network_security_group" "nsg" {
@@ -169,7 +169,7 @@ resource "azurerm_network_security_group" "nsg" {
 }
 
 ##############################################
-# STEP 8 — ATTACH NSG TO NIC (Marcela)
+# NSG TO NETWORK INTERFACE ASSOCIATION
 ##############################################
 
 resource "azurerm_network_interface_security_group_association" "nic_nsg" {
@@ -178,11 +178,7 @@ resource "azurerm_network_interface_security_group_association" "nic_nsg" {
 }
 
 #########################################################
-# STEP 0 — Create the Linux VM (Marcela)
-# STEP 1 — Admin username (Reza) – uses local.admin_username
-# STEP 2 — Random password (Reza) – uses random_password.admin.result
-# STEP 4 — OS choice (Thapa)
-# STEP 5 — Use existing NIC from Unit 6 (Marcela)
+# LINUX VIRTUAL MACHINE
 #########################################################
 
 resource "azurerm_linux_virtual_machine" "vm" {
@@ -190,20 +186,20 @@ resource "azurerm_linux_virtual_machine" "vm" {
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
 
-  # ❗ Updated because Standard_B2ats_v2 is NOT available in eastus2
+  # VM size selected based on regional availability
   size                = "Standard_B1s"  # Changed from Standard_B2ats_v2
 
-  # STEP 1 & STEP 2 — Username + random password
+  # Configure administrator credentials
   admin_username                  = local.admin_username
   admin_password                  = random_password.admin.result
   disable_password_authentication = false
 
-  # STEP 5 — VM uses the NIC from Unit 6
+  # Attach the existing network interface
   network_interface_ids = [
     azurerm_network_interface.nic.id
   ]
 
-  # STEP 4 — OS selection (Ubuntu 22.04 LTS – Thapa)
+  # Ubuntu 22.04 LTS image
   source_image_reference {
     publisher = "Canonical"
     offer     = "0001-com-ubuntu-server-jammy"
@@ -223,7 +219,7 @@ resource "azurerm_linux_virtual_machine" "vm" {
 }
 
 ##############################################
-# STEP 3 — Configure Python3 web server (Thapa)
+# CONFIGURE PYTHON WEB SERVER
 ##############################################
 
 resource "null_resource" "configure_webserver" {
@@ -250,7 +246,7 @@ resource "null_resource" "configure_webserver" {
 }
 
 ##############################################
-# STEP 9 & 10 — Upload TXT file (Selorm update)
+# UPLOAD PROJECT DATA FILE
 ##############################################
 
 resource "null_resource" "upload_group6_csv" {
@@ -271,18 +267,11 @@ resource "null_resource" "upload_group6_csv" {
 }
 
 ##############################################
-# STEP 11 — Output instance IP and password
+# TERRAFORM OUTPUTS
 ##############################################
 
 # Public IP address of the Linux VM (shown in plan/apply)
 output "vm_public_ip" {
   description = "Public IP address of the Linux VM"
   value       = azurerm_public_ip.public_ip.ip_address
-}
-
-# Random admin password for the Linux VM (hidden in plan/apply)
-output "vm_admin_password" {
-  description = "Random admin password for the Linux VM (sensitive)"
-  value       = random_password.admin.result
-  sensitive   = true
 }
