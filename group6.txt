@@ -1,0 +1,5 @@
+FirstName,FavoriteColor,SecondDigit
+Marcela,Blue,7
+Reza,Green,7
+Thapa,Red,7
+Selorm,Yellow,6
